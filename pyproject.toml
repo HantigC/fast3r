@@ -1,0 +1,101 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fast3r"
+version = "1.0"
+description = "Fast3R: Fast 3D Reconstruction"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Jianing Yang", email = "jianingy@umich.edu" }]
+
+# Core runtime dependencies: exactly what the import-time inference path needs,
+# i.e. the `Fast3R.from_pretrained(...)` + `inference(...)` + `load_images(...)`
+# + `MultiViewDUSt3RInferenceWrapper.estimate_camera_poses(...)` flow from the
+# README. `pip install .` gives a Lightning-free, inference-only environment.
+# The demo UI, training/eval/sweeps, logging, and loading raw Lightning
+# training checkpoints all live in the extras below.
+#
+# NOTE: `torch` / `torchvision` are intentionally not listed (install them
+# yourself or use the CUDA base image), matching the previous behaviour.
+dependencies = [
+    # --------- runtime / model loading --------- #
+    "huggingface-hub[torch]>=0.22",  # Fast3R.from_pretrained weight download
+    "omegaconf",                 # config objects used by the model
+    "packaging",                 # version checks in the model code
+
+    # --------- numerics / geometry --------- #
+    "numpy<2.0.0",               # conservative pin; parts of the CV/geometry stack still assume numpy 1.x
+    "einops",
+    "roma",                      # rigid registration + camera-pose helpers
+    "scipy",
+
+    # --------- image IO --------- #
+    "opencv-python",
+    "pillow",
+    "pillow_heif",               # optional HEIC/HEIF support in load_images
+    "tqdm",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",  # hooks for applying linters on commit
+    "pytest",      # tests
+]
+
+# Interactive demo: `python src/fast3r/viz/demo.py` with a HuggingFace model
+# (Gradio front-end + viser 3D viewer). Running the demo against a raw Lightning
+# training checkpoint (`--is_lightning_checkpoint`) additionally needs `[train]`.
+demo = [
+    "gradio",
+    "viser",
+    "matplotlib",
+    "imageio",
+    "rich",        # console output in demo.py
+    "trimesh",     # mesh export / 3D visualization
+]
+
+# Full training / evaluation / hyper-parameter sweep stack (also required to
+# load raw Lightning checkpoints). Superset of the core deps plus the demo.
+train = [
+    "fast3r[demo]",
+
+    # --------- lightning --------- #
+    "lightning>=2.5.0",          # MultiViewDUSt3RLitModule / datamodule
+    "lightning-bolts",           # pl_bolts LR scheduler
+    "lightning-utilities",       # rank_zero helpers (also used when loading Lightning ckpts)
+    "torchmetrics",              # training / validation metrics
+    "torchinfo",
+
+    # --------- eval / metrics --------- #
+    "open3d",                    # 3D reconstruction eval (ICP, meshing)
+    "scikit-learn",              # NearestNeighbors in fast3r.eval.recon_metric
+
+    # --------- hydra --------- #
+    "hydra-core",
+    "hydra-colorlog",
+    "hydra-optuna-sweeper",
+
+    # --------- loggers --------- #
+    "wandb",
+
+    # --------- training utils --------- #
+    "rootutils",       # standardizing the project root setup
+    "nvitop",
+    "deepspeed",
+    "jupyterlab",
+
+    # --------- extra viz / plotting --------- #
+    "plotly",
+    "scikit-image",
+    "seaborn",
+    "pyglet<2",
+]
+
+[project.urls]
+Homepage = "https://fast3r-3d.github.io/"
+
+[tool.setuptools.packages.find]
+where = ["src"]

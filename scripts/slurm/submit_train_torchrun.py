@@ -82,7 +82,7 @@ echo MASTER_ADDR: $MASTER_ADDR, MASTER_PORT: $MASTER_PORT, SLURM_PROCID: $SLURM_
 echo local hostname: $(hostname) && \
 SLURM_NTASKS_PER_NODE=$SLURM_GPUS_PER_NODE torchrun \
     --nnodes=$SLURM_NNODES --nproc_per_node=$SLURM_GPUS_PER_NODE --rdzv-id=$RDZV_ID --rdzv-backend=c10d --rdzv-endpoint=$MASTER_ADDR:$MASTER_PORT \
-    fast3r/train.py +slurm_job_id=$SLURM_JOBID trainer.num_nodes={nodes} experiment={experiment} \
+    src/fast3r/train.py +slurm_job_id=$SLURM_JOBID trainer.num_nodes={nodes} experiment={experiment} \
 '
 
 echo "srun finished. Job completed on $(date)"

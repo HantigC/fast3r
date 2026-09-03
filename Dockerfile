@@ -19,11 +19,10 @@ WORKDIR /
 RUN git clone --depth 1 https://github.com/facebookresearch/fast3r
 
 WORKDIR /fast3r
-RUN pip install -r requirements.txt
 RUN pip install -e .
 
 ENV CUDA_VISIBLE_DEVICES=0
 
 EXPOSE 7860
 
-CMD ["python", "fast3r/viz/demo.py"]
+CMD ["python", "src/fast3r/viz/demo.py"]

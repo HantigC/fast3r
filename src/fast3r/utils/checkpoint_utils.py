@@ -1,12 +1,12 @@
 import os
 import torch
-import hydra
-from omegaconf import OmegaConf
 
-from fast3r.models.multiview_dust3r_module import MultiViewDUSt3RLitModule
 from fast3r.models.fast3r import Fast3R
+from fast3r.models.multiview_dust3r_inference import MultiViewDUSt3RInferenceWrapper
 
-from lightning.pytorch.utilities.deepspeed import convert_zero_checkpoint_to_fp32_state_dict
+# NOTE: `hydra`, `omegaconf` and everything under `fast3r.models.multiview_dust3r_module`
+# / `lightning` are imported lazily inside `load_lightning_checkpoint` so that the
+# default (HuggingFace) inference path stays lightning-free.
 
 # -------------------------------
 # load_lightning_checkpoint
@@ -22,10 +22,17 @@ def load_lightning_checkpoint(checkpoint_dir, device: torch.device):
     Returns: model, lit_module
     """
     print(f"Loading Lightning checkpoint from {checkpoint_dir}")
-    
+
+    # Lazy imports: only the Lightning-checkpoint path needs hydra / lightning.
+    import hydra
+    from omegaconf import OmegaConf
+    from lightning.pytorch.utilities.deepspeed import convert_zero_checkpoint_to_fp32_state_dict
+
+    from fast3r.models.multiview_dust3r_module import MultiViewDUSt3RLitModule
+
     # Create an empty model to hold the weights
     print("Creating an empty lightning module to hold the weights...")
-    
+
     # Load the config from the checkpoint directory
     config_path = os.path.join(checkpoint_dir, '.hydra/config.yaml')
     if not os.path.exists(config_path):
@@ -94,8 +101,8 @@ def load_model(checkpoint_dir, device: torch.device, is_lightning_checkpoint=Fal
     model = Fast3R.from_pretrained(checkpoint_dir)
     model = model.to(device)
     
-    # Create a lightweight lit_module wrapper for the model
-    lit_module = MultiViewDUSt3RLitModule.load_for_inference(model)
+    # Create a lightweight (Lightning-free) wrapper for the model
+    lit_module = MultiViewDUSt3RInferenceWrapper.load_for_inference(model)
 
     # Set model to evaluation mode
     model.eval()

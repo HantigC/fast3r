@@ -17,7 +17,7 @@ import torch
 import viser
 import viser.transforms as tf
 from fast3r.dust3r.utils.device import to_numpy
-from fast3r.models.multiview_dust3r_module import MultiViewDUSt3RLitModule
+from fast3r.models.multiview_dust3r_inference import estimate_camera_poses
 
 # ----------------- Helper Functions -----------------
 
@@ -276,7 +276,7 @@ def start_visualization(output, min_conf_thr_percentile=10, global_conf_thr_valu
             client.camera.look_at = (-0.00352821, -0.01143425, 0.0154939)
         client.flush()
 
-    poses_c2w_batch, estimated_focals = MultiViewDUSt3RLitModule.estimate_camera_poses(
+    poses_c2w_batch, estimated_focals = estimate_camera_poses(
         output['preds'], niter_PnP=100, focal_length_estimation_method='first_view_from_global_head'
     )
     poses_c2w = poses_c2w_batch[0]

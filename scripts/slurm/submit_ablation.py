@@ -81,7 +81,7 @@ echo "env setup on head node ($HOSTNAME) finished, starting srun..."
 srun --cpu-bind=none --jobid $SLURM_JOBID /bin/bash -c ' \
 echo MASTER_ADDR: $MASTER_ADDR, MASTER_PORT: $MASTER_PORT, SLURM_PROCID: $SLURM_PROCID && \
 echo local hostname: $(hostname) && \
-python fast3r/eval.py +slurm_job_id=$SLURM_JOBID trainer.num_nodes={nodes} eval={eval_config} \
+python src/fast3r/eval.py +slurm_job_id=$SLURM_JOBID trainer.num_nodes={nodes} eval={eval_config} \
 '
 
 echo "srun finished. Job completed on $(date)"

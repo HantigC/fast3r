@@ -83,7 +83,7 @@ echo MASTER_ADDR: $MASTER_ADDR, MASTER_PORT: $MASTER_PORT, SLURM_PROCID: $SLURM_
 echo local hostname: $(hostname) && \
 torchrun \
     --nnodes=$SLURM_NNODES --nproc_per_node=$SLURM_GPUS_PER_NODE --rdzv-id=$RDZV_ID --rdzv-backend=c10d --rdzv-endpoint=$MASTER_ADDR:$MASTER_PORT \
-    fast3r/eval.py paths.run_folder_name={eval_config}_$SLURM_JOBID trainer.num_nodes={nodes} logger.wandb.name={eval_config}_$SLURM_JOBID eval={eval_config} \
+    src/fast3r/eval.py paths.run_folder_name={eval_config}_$SLURM_JOBID trainer.num_nodes={nodes} logger.wandb.name={eval_config}_$SLURM_JOBID eval={eval_config} \
 '
 
 echo "srun finished. Job completed on $(date)"

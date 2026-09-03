@@ -32,11 +32,20 @@ conda activate fast3r
 # install PyTorch (adjust cuda version according to your system)
 conda install pytorch torchvision torchaudio pytorch-cuda=12.4 nvidia/label/cuda-12.4.0::cuda-toolkit -c pytorch -c nvidia
 
-# install requirements
-pip install -r requirements.txt
-
-# install fast3r as a package (so you can import fast3r and use it in your own project)
+# install fast3r as a package with the inference-only dependencies
+# (import fast3r and run a pretrained HuggingFace model in your own project;
+#  this install has no `lightning` dependency)
 pip install -e .
+
+# to also run the interactive demo (Gradio + viser viewer)
+pip install -e ".[demo]"
+
+# to train / evaluate / run sweeps, or to load a raw Lightning checkpoint
+# (full stack: lightning, hydra, wandb, deepspeed, ...)
+pip install -e ".[train]"
+
+# for development (linters, tests), install the optional dev dependencies
+pip install -e ".[dev]"
 ```
 
 Note: Please make sure to NOT install the cuROPE module like in DUSt3R - it would mess up Fast3R's prediction.
@@ -46,13 +55,13 @@ Note: Please make sure to NOT install the cuROPE module like in DUSt3R - it woul
 Use the following command to run the demo:
 
 ```bash
-python fast3r/viz/demo.py
+python src/fast3r/viz/demo.py
 ```
 This will automatically download the pre-trained model weights and config from [Hugging Face Model](https://huggingface.co/jedyang97/Fast3R_ViT_Large_512).
 
 The demo is a Gradio interface where you can upload images or a video and visualize the 3D reconstruction and camera pose estimation.
 
-`fast3r/viz/demo.py` also serves as an example of how to use the model for inference.
+`src/fast3r/viz/demo.py` also serves as an example of how to use the model for inference.
 
 <div>
   <img src="assets/fast3r_demo_upload.gif" width="45%" alt="Demo GIF 1" />
@@ -77,7 +86,7 @@ import torch
 from fast3r.dust3r.utils.image import load_images
 from fast3r.dust3r.inference_multiview import inference
 from fast3r.models.fast3r import Fast3R
-from fast3r.models.multiview_dust3r_module import MultiViewDUSt3RLitModule
+from fast3r.models.multiview_dust3r_inference import MultiViewDUSt3RInferenceWrapper
 
 # --- Setup ---
 # Load the model from Hugging Face
@@ -85,9 +94,9 @@ model = Fast3R.from_pretrained("jedyang97/Fast3R_ViT_Large_512")  # If you have 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
 
-# Create a lightweight lightning module wrapper for the model.
+# Create a lightweight (Lightning-free) wrapper for the model.
 # This provides functions to estimate camera poses, evaluate 3D reconstruction, etc.
-lit_module = MultiViewDUSt3RLitModule.load_for_inference(model)
+lit_module = MultiViewDUSt3RInferenceWrapper.load_for_inference(model)
 
 # Set model to evaluation mode
 model.eval()
@@ -111,7 +120,7 @@ output_dict, profiling_info = inference(
 
 # --- Estimate Camera Poses ---
 # This step estimates the camera-to-world (c2w) poses for each view using PnP.
-poses_c2w_batch, estimated_focals = MultiViewDUSt3RLitModule.estimate_camera_poses(
+poses_c2w_batch, estimated_focals = MultiViewDUSt3RInferenceWrapper.estimate_camera_poses(
     output_dict['preds'],
     niter_PnP=100,
     focal_length_estimation_method='first_view_from_global_head'
@@ -136,13 +145,13 @@ for view_idx, pred in enumerate(output_dict['preds']):
 Train model with chosen experiment configuration from [configs/experiment/](configs/experiment/)
 
 ```bash
-python fast3r/train.py experiment=super_long_training/super_long_training
+python src/fast3r/train.py experiment=super_long_training/super_long_training
 ```
 
 You can override any parameter from command line following [Hydra override syntax](https://hydra.cc/docs/advanced/override_grammar/basic/):
 
 ```bash
-python fast3r/train.py experiment=super_long_training/super_long_training trainer.max_epochs=20 trainer.num_nodes=2
+python src/fast3r/train.py experiment=super_long_training/super_long_training trainer.max_epochs=20 trainer.num_nodes=2
 ```
 
 To submit a multi-node training job with Slurm, use the following command:
@@ -151,9 +160,9 @@ To submit a multi-node training job with Slurm, use the following command:
 python scripts/slurm/submit_train.py --nodes=<NODES> --experiment=<EXPERIMENT>
 ```
 
-After training, you can run the demo with a lightning checkpoint with the following command:
+After training, you can run the demo with a lightning checkpoint with the following command (requires `pip install -e ".[train]"`, since loading a raw Lightning checkpoint needs `lightning` + `hydra`):
 ```bash
-python fast3r/viz/demo.py --is_lightning_checkpoint --checkpoint_dir=/path/to/super_long_training_999999
+python src/fast3r/viz/demo.py --is_lightning_checkpoint --checkpoint_dir=/path/to/super_long_training_999999
 ```
 
 ## Evaluation
@@ -161,7 +170,7 @@ python fast3r/viz/demo.py --is_lightning_checkpoint --checkpoint_dir=/path/to/su
 To evaluate on 3D reconstruction or camera pose estimation tasks, run:
 
 ```bash
-python fast3r/eval.py eval=<eval_config>
+python src/fast3r/eval.py eval=<eval_config>
 ```
 `<eval_config>` can be any of the evaluation configurations in [configs/eval/](configs/eval/). For example:
 - `ablation_recon_better_inference_hp/ablation_recon_better_inference_hp` evaluates the 3D reconstruction on DTU, 7-Scenes and Neural-RGBD datasets.
